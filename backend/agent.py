@@ -35,7 +35,7 @@ class YelpQueryInput(BaseModel):
 
 
 # @tool(args_schema=YelpQueryInput)
-def yelp_ai_api(query: str, chat_id: str | None, user_context: UserContext | None) -> dict:
+def ask_yelp(query: str, chat_id: str | None, user_context: UserContext | None) -> dict:
     """
     Calls Yelp AI API to get local business information and comparisons from a natural language query.
 
@@ -81,7 +81,7 @@ def main():
     agent = create_agent(
         model=model,
         system_prompt=SYSTEM_PROMPT,
-        tools=[yelp_ai_api],
+        tools=[ask_yelp],
         checkpointer=checkpointer,
         debug=True
     )
