@@ -18,24 +18,12 @@ from tools import ask_yelp
 
 load_dotenv()
 
+model = init_chat_model("gpt-3.5-turbo")
 
-def main():
-    # Test API
-    model = init_chat_model("gpt-3.5-turbo")
+query = "Find me moving companies near me. I am located in San Jose, CA."
 
-    query = "Find me moving companies near me. I am located in San Jose, CA."
-
-    agent = create_agent(
-        model=model,
-        system_prompt=SYSTEM_PROMPT,
-        tools=[ask_yelp]
-    )
-    response = agent.invoke(
-        {"messages": [{"role": "user", "content": query}]}
-    )
-
-    print("Agent response:", response)
-
-
-if __name__ == "__main__":
-    main()
+agent = create_agent(
+    model=model,
+    system_prompt=SYSTEM_PROMPT,
+    tools=[ask_yelp]
+)
