@@ -20,8 +20,6 @@ load_dotenv()
 
 model = init_chat_model("gpt-3.5-turbo")
 
-query = "Find me moving companies near me. I am located in San Jose, CA."
-
 agent = create_agent(
     model=model,
     system_prompt=SYSTEM_PROMPT,
