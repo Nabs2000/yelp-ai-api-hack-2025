@@ -31,7 +31,7 @@ const Dashboard = () => {
             <div className="bg-indigo-600 p-2 rounded-lg">
               <User className="h-6 w-6 text-white" />
             </div>
-            <span className="font-bold text-xl text-white">MyProject</span>
+            <span className="font-bold text-xl text-white">Home Page</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-gray-300 hidden sm:inline">
@@ -48,9 +48,9 @@ const Dashboard = () => {
         </nav>
 
         <div className="bg-gray-800 p-8 rounded-2xl border border-gray-700 text-center shadow-xl">
-          <h1 className="text-3xl font-bold text-white mb-4">Welcome to your Dashboard!</h1>
+          <h1 className="text-3xl font-bold text-white mb-4">This is the homepage</h1>
           <p className="text-gray-400">
-             You are securely logged in.
+             Home page stuff goes here
           </p>
         </div>
       </div>

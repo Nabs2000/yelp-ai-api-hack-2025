@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Lock, Mail, LogIn, Loader2, AlertCircle } from 'lucide-react';
 
-const API_BASE_URL = '[http://127.0.0.1:8000](http://127.0.0.1:8000)';
+const API_BASE_URL = 'http://127.0.0.1:8000';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -23,19 +23,31 @@ const Login = () => {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.detail || 'Login failed');
+        const errorText = await response.text();
+        let errorMsg = 'Login failed';
+        try {
+            const errorJson = JSON.parse(errorText);
+            errorMsg = errorJson.detail || errorMsg;
+        } catch {
+            errorMsg = errorText || `Error ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMsg);
       }
 
+      const data = await response.json();
+
       console.log('Login successful:', data);
-      
       localStorage.setItem('user', JSON.stringify(data.user));
-      
       navigate('/dashboard');
+      
     } catch (err: any) {
-      setError(err.message);
+      console.error("Login Error:", err);
+      if (err.message.includes("Email not confirmed")) {
+        setError("Please verify your email address before logging in.");
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -52,8 +64,8 @@ const Login = () => {
     <p className="text-center text-gray-400 mb-8">Sign in to access your account</p>
 
     {error && (
-        <div className="mb-6 p-4 bg-red-900/50 border border-red-700 text-red-200 rounded-lg flex items-center gap-2">
-        <AlertCircle className="h-5 w-5" />
+        <div className="mb-6 p-4 bg-red-900/50 border border-red-700 text-red-200 rounded-lg flex items-center gap-2 text-left">
+        <AlertCircle className="h-5 w-5 shrink-0" />
         <span>{error}</span>
         </div>
     )}

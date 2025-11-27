@@ -1,22 +1,26 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Lock, Mail, UserPlus, Loader2, AlertCircle } from 'lucide-react';
+import { Lock, Mail, UserPlus, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 
-const API_BASE_URL = '[http://127.0.0.1:8000](http://127.0.0.1:8000)';
+const API_BASE_URL = 'http://127.0.0.1:8000';
 
 const Register = () => {
   const navigate = useNavigate();
+  
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
-    password: ''
+    password: '',
+    confirmPassword: '' 
   });
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    if (error) setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,11 +28,30 @@ const Register = () => {
     setLoading(true);
     setError(null);
 
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match.");
+      setLoading(false);
+      return;
+    }
+
+    if (formData.password.length < 6) {
+        setError("Password must be at least 6 characters long.");
+        setLoading(false);
+        return;
+    }
+
     try {
+      const payload = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password
+      };
+
       const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -38,7 +61,6 @@ const Register = () => {
       }
 
       console.log('Registration successful:', data);
-      // After register, go to login
       navigate('/login');
       
     } catch (err: any) {
@@ -109,6 +131,7 @@ const Register = () => {
         </div>
         </div>
 
+        {/* Password Field */}
         <div className="mb-4 text-left">
         <label className="block text-gray-300 text-sm font-bold mb-2">Password</label>
         <div className="relative">
@@ -120,17 +143,48 @@ const Register = () => {
             name="password"
             value={formData.password}
             onChange={handleChange}
-            className="w-full pl-10 pr-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-white placeholder-gray-400"
+            className={`w-full pl-10 pr-3 py-2 bg-gray-700 border rounded-lg focus:outline-none focus:ring-2 text-white placeholder-gray-400 transition-colors
+                ${formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword 
+                ? 'border-red-500 focus:ring-red-500' 
+                : 'border-gray-600 focus:ring-green-500'}`}
             placeholder="Create a strong password"
             required
             />
         </div>
         </div>
 
+        <div className="mb-6 text-left">
+        <label className="block text-gray-300 text-sm font-bold mb-2">Confirm Password</label>
+        <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            {formData.password && formData.password === formData.confirmPassword ? (
+                <CheckCircle className="h-5 w-5 text-green-500" />
+            ) : (
+                <Lock className="h-5 w-5 text-gray-500" />
+            )}
+            </div>
+            <input
+            type="password"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            className={`w-full pl-10 pr-3 py-2 bg-gray-700 border rounded-lg focus:outline-none focus:ring-2 text-white placeholder-gray-400 transition-colors
+                ${formData.confirmPassword && formData.password !== formData.confirmPassword 
+                ? 'border-red-500 focus:ring-red-500' 
+                : 'border-gray-600 focus:ring-green-500'}`}
+            placeholder="Confirm your password"
+            required
+            />
+        </div>
+        {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+            <p className="text-red-400 text-xs mt-1">Passwords do not match</p>
+        )}
+        </div>
+
         <button
         type="submit"
         disabled={loading}
-        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center mt-6"
+        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center"
         >
         {loading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Create Account'}
         </button>
