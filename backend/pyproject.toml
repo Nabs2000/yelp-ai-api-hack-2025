@@ -9,4 +9,5 @@ dependencies = [
     "langchain-core>=1.1.0",
     "pydantic>=2.12.4",
     "python-dotenv>=1.2.1",
+    "pytest>=9.0.1",
 ]
