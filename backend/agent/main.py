@@ -9,8 +9,8 @@ from langchain.chat_models import init_chat_model
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
 
-from prompt import SYSTEM_PROMPT
-from tools import ask_yelp
+from .prompt import SYSTEM_PROMPT
+from .tools import ask_yelp
 # from langchain_openai import ChatOpenAI
 # from langchain.prompts import ChatPromptTemplate
 # from langchain.agents import AgentExecutor, create_tool_calling_agent
@@ -25,3 +25,8 @@ agent = create_agent(
     system_prompt=SYSTEM_PROMPT,
     tools=[ask_yelp]
 )
+
+query = "Can you help me find a moving company in San Francisco?"
+response = agent.invoke(
+    {"messages": [{"role": "user", "content": query}]})
+print(response)
