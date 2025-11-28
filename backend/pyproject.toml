@@ -10,5 +10,5 @@ dependencies = [
     "pydantic>=2.12.4",
     "python-dotenv>=1.2.1",
     "supabase>=2.24.0",
-    "fastapi>=0.122.0",
+    "fastapi[standard]>=0.122.0",
 ]
