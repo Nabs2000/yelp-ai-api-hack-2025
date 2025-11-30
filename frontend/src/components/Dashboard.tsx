@@ -1,24 +1,29 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { User, LogOut } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { User, LogOut } from "lucide-react";
+import { type User as UserType } from "../types/user.types";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UserType | null>(null);
 
   useEffect(() => {
     // Check if user is logged in
-    const storedUser = localStorage.getItem('user');
+    const storedUser = localStorage.getItem("user");
     if (!storedUser) {
-      navigate('/login');
+      navigate("/login");
     } else {
       setUser(JSON.parse(storedUser));
     }
   }, [navigate]);
 
+  useEffect(() => {
+    console.log("Current user:", user);
+  }, [user]);
+
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    navigate('/login');
+    localStorage.removeItem("user");
+    navigate("/login");
   };
 
   if (!user) return null;
@@ -35,7 +40,8 @@ const Dashboard = () => {
           </div>
           <div className="flex items-center gap-4">
             <span className="text-gray-300 hidden sm:inline">
-              Hello, {user.email}
+              Hello, {user.user_metadata.first_name}{" "}
+              {user.user_metadata.last_name}!
             </span>
             <button
               onClick={handleLogout}
@@ -48,10 +54,10 @@ const Dashboard = () => {
         </nav>
 
         <div className="bg-gray-800 p-8 rounded-2xl border border-gray-700 text-center shadow-xl">
-          <h1 className="text-3xl font-bold text-white mb-4">This is the homepage</h1>
-          <p className="text-gray-400">
-             Home page stuff goes here
-          </p>
+          <h1 className="text-3xl font-bold text-white mb-4">
+            This is the homepage
+          </h1>
+          <p className="text-gray-400">Home page stuff goes here</p>
         </div>
       </div>
     </div>
