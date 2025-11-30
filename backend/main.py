@@ -9,6 +9,7 @@ load_dotenv()
 
 app = FastAPI()
 
+
 class UserLoginRequest(BaseModel):
     email: str
     password: str
@@ -20,6 +21,7 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
 
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
@@ -30,19 +32,24 @@ app.add_middleware(
 )
 
 # Handle user authentication
+
+
 @app.post("/api/auth/login")
 async def login(user_login: UserLoginRequest):
     try:
         print("Logging with email:", user_login.email)
+        # Sign in user
         response = supabase.auth.sign_in_with_password(
             {
                 "email": user_login.email,
                 "password": user_login.password,
             }
         )
-        return {"user": response.user.dict(), "session": response.session.dict()}
+        if response.user and response.session:
+            return {"user": response.user.model_dump(), "session": response.session.model_dump()}
     except Exception as e:
         raise HTTPException(status_code=401, detail=str(e))
+
 
 @app.post("/api/auth/register")
 async def register_user(register_request: RegisterRequest):
@@ -61,7 +68,8 @@ async def register_user(register_request: RegisterRequest):
             }
         )
         print("Response:", response)
-        return {"user": response.user.dict()}
+        if response.user:
+            return {"user": response.user.model_dump()}
     except Exception as e:
         print("Exception:", e)
         raise HTTPException(status_code=401, detail=str(e))
