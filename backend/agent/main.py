@@ -25,8 +25,3 @@ agent = create_agent(
     system_prompt=SYSTEM_PROMPT,
     tools=[ask_yelp]
 )
-
-query = "Can you help me find a moving company in San Francisco?"
-response = agent.invoke(
-    {"messages": [{"role": "user", "content": query}]})
-print(response)

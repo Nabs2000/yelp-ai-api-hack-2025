@@ -41,9 +41,11 @@ dependencies = [
     { name = "fastapi", extra = ["standard"] },
     { name = "langchain", extra = ["openai"] },
     { name = "langchain-core" },
+    { name = "langgraph" },
     { name = "pydantic" },
     { name = "pytest" },
     { name = "python-dotenv" },
+    { name = "requests" },
     { name = "supabase" },
 ]
 
@@ -52,9 +54,11 @@ requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.122.0" },
     { name = "langchain", extras = ["openai"], specifier = ">=1.1.0" },
     { name = "langchain-core", specifier = ">=1.1.0" },
+    { name = "langgraph", specifier = ">=0.2.0" },
     { name = "pydantic", specifier = ">=2.12.4" },
     { name = "pytest", specifier = ">=9.0.1" },
     { name = "python-dotenv", specifier = ">=1.2.1" },
+    { name = "requests", specifier = ">=2.31.0" },
     { name = "supabase", specifier = ">=2.24.0" },
 ]
 
