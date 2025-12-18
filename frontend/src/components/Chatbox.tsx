@@ -3,7 +3,7 @@ import { Send, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 
 interface Message {
   id: string;
@@ -13,12 +13,14 @@ interface Message {
 
 interface ChatboxProps {
   conversationId: string;
+  onTitleGenerated?: (conversationId: string, title: string) => void;
 }
 
-export default function Chatbox({ conversationId }: ChatboxProps) {
+export default function Chatbox({ conversationId, onTitleGenerated }: ChatboxProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -27,6 +29,38 @@ export default function Chatbox({ conversationId }: ChatboxProps) {
   const userStr = localStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : null;
   const userId = user?.id;
+
+  // Load existing messages when conversation changes
+  useEffect(() => {
+    const loadMessages = async () => {
+      if (!conversationId) return;
+
+      setIsLoadingMessages(true);
+      try {
+        const response = await fetch(`${API_BASE_URL}/conversation/${conversationId}/messages`);
+
+        if (!response.ok) {
+          throw new Error("Failed to load messages");
+        }
+
+        const data = await response.json();
+        const loadedMessages: Message[] = data.messages.map((msg: any) => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+        }));
+
+        setMessages(loadedMessages);
+      } catch (err) {
+        console.error("Error loading messages:", err);
+        setError("Failed to load conversation history");
+      } finally {
+        setIsLoadingMessages(false);
+      }
+    };
+
+    loadMessages();
+  }, [conversationId]);
 
   // Request user's location
   useEffect(() => {
@@ -92,6 +126,11 @@ export default function Chatbox({ conversationId }: ChatboxProps) {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+
+      // Update conversation title if generated
+      if (data.title && onTitleGenerated) {
+        onTitleGenerated(conversationId, data.title);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send message");
       console.error("Error sending message:", err);
@@ -133,7 +172,14 @@ export default function Chatbox({ conversationId }: ChatboxProps) {
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 ? (
+        {isLoadingMessages ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center text-gray-400">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+              <p className="text-sm">Loading conversation...</p>
+            </div>
+          </div>
+        ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-gray-400">
               <p className="text-lg mb-2">Start a conversation!</p>

@@ -1,14 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find:*)",
-      "Bash(git branch:*)",
-      "Bash(uv sync:*)",
-      "Bash(uv run:*)",
-      "Bash(npm run dev:*)",
-      "Bash(npm install:*)"
-    ],
-    "deny": [],
-    "ask": []
+      "Bash(cat:*)",
+      "Bash(xargs git show --stat)",
+      "Bash(python:*)"
+    ]
   }
 }

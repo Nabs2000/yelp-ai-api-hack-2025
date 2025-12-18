@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, LogOut, MessageSquarePlus, MessageSquare } from "lucide-react";
+import { User, LogOut, MessageSquarePlus, MessageSquare, Loader2 } from "lucide-react";
 import { type User as UserType } from "../types/user.types";
 import Chatbox from "./Chatbox";
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 
 interface Conversation {
   id: string;
@@ -17,6 +17,8 @@ const Dashboard = () => {
   const [user, setUser] = useState<UserType | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(false);
+  const [isCreatingConversation, setIsCreatingConversation] = useState(false);
 
   useEffect(() => {
     // Check if user is logged in
@@ -36,15 +38,29 @@ const Dashboard = () => {
   }, [user]);
 
   const fetchConversations = async () => {
-    // This would fetch from Supabase in a real implementation
-    // For now, we'll keep it simple since we need direct Supabase access
-    // which would require the Supabase client on the frontend
-    // We can add this later as an API endpoint
+    if (!user?.id) return;
+
+    setIsLoadingConversations(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/conversations/${user.id}`);
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch conversations");
+      }
+
+      const data = await response.json();
+      setConversations(data.conversations || []);
+    } catch (err) {
+      console.error("Error fetching conversations:", err);
+    } finally {
+      setIsLoadingConversations(false);
+    }
   };
 
   const handleNewConversation = async () => {
-    if (!user?.id) return;
+    if (!user?.id || isCreatingConversation) return;
 
+    setIsCreatingConversation(true);
     try {
       const response = await fetch(`${API_BASE_URL}/start_chat`, {
         method: "POST",
@@ -70,12 +86,22 @@ const Dashboard = () => {
       setConversations((prev) => [newConv, ...prev]);
     } catch (err) {
       console.error("Error creating new conversation:", err);
+    } finally {
+      setIsCreatingConversation(false);
     }
   };
 
   const handleLogout = () => {
     localStorage.removeItem("user");
     navigate("/login");
+  };
+
+  const handleTitleGenerated = (conversationId: string, title: string) => {
+    setConversations((prev) =>
+      prev.map((conv) =>
+        conv.id === conversationId ? { ...conv, title } : conv
+      )
+    );
   };
 
   if (!user) return null;
@@ -97,15 +123,24 @@ const Dashboard = () => {
           </div>
           <button
             onClick={handleNewConversation}
-            className="w-full flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors cursor-pointer"
+            disabled={isCreatingConversation}
+            className="w-full flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <MessageSquarePlus className="h-4 w-4" />
+            {isCreatingConversation ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <MessageSquarePlus className="h-4 w-4" />
+            )}
             <span>New Chat</span>
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-2">
-          {conversations.length === 0 ? (
+          {isLoadingConversations ? (
+            <div className="flex items-center justify-center mt-4">
+              <Loader2 className="h-6 w-6 text-gray-500 animate-spin" />
+            </div>
+          ) : conversations.length === 0 ? (
             <p className="text-gray-500 text-sm text-center mt-4">
               No conversations yet
             </p>
@@ -158,7 +193,11 @@ const Dashboard = () => {
           </div>
           <div className="flex-1 overflow-hidden">
             {currentConversationId ? (
-              <Chatbox key={currentConversationId} conversationId={currentConversationId} />
+              <Chatbox
+                key={currentConversationId}
+                conversationId={currentConversationId}
+                onTitleGenerated={handleTitleGenerated}
+              />
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">

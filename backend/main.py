@@ -128,6 +128,38 @@ async def start_chat_endpoint(req: StartChatRequest):
     return {"conversation_id": new_conversation["id"]}
 
 
+@app.get("/conversations/{user_id}")
+async def get_conversations(user_id: str):
+    """Get all conversations for a user, ordered by most recent first"""
+    try:
+        response = supabase.table("conversations")\
+            .select("*")\
+            .eq("user_id", user_id)\
+            .order("created_at", desc=True)\
+            .execute()
+
+        return {"conversations": response.data}
+    except Exception as e:
+        print(f"Error fetching conversations: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/conversation/{conversation_id}/messages")
+async def get_conversation_messages(conversation_id: str):
+    """Get all messages for a specific conversation, ordered chronologically"""
+    try:
+        response = supabase.table("messages")\
+            .select("*")\
+            .eq("conversation_id", conversation_id)\
+            .order("created_at", desc=False)\
+            .execute()
+
+        return {"messages": response.data}
+    except Exception as e:
+        print(f"Error fetching messages: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/chat")
 async def chat_endpoint(req: ChatRequest):
     # Fetch conversation history from Supabase
@@ -141,13 +173,21 @@ async def chat_endpoint(req: ChatRequest):
     messages = [{"role": msg["role"], "content": msg["content"]}
                 for msg in history_response.data]
 
-    # Check if this is a new moving request
+    # Check if this is a new moving request OR a follow-up asking for business recommendations
     moving_keywords = ["move", "moving", "relocate", "relocation"]
-    is_moving_request = any(keyword in req.message.lower()
-                            for keyword in moving_keywords) and len(messages) <= 1
+    is_initial_moving_request = any(keyword in req.message.lower()
+                                     for keyword in moving_keywords) and len(messages) <= 1
+
+    # Check if follow-up is asking for business recommendations
+    business_keywords = ["restaurant", "food", "eat", "storage", "mover", "moving company",
+                         "apartment", "housing", "hotel", "furniture", "store", "shop",
+                         "cleaning", "activity", "activities", "things to do", "fun",
+                         "recommend", "suggestion", "find", "looking for", "tell me about",
+                         "what about", "where can i", "best", "good"]
+    is_business_query = any(keyword in req.message.lower() for keyword in business_keywords)
 
     try:
-        if is_moving_request:
+        if is_initial_moving_request:
             # Extract cities using GPT-4o
             city_extract_response = openai_client.chat.completions.create(
                 model="gpt-4o",
@@ -164,26 +204,36 @@ async def chat_endpoint(req: ChatRequest):
             destination = cities.get("destination", "new city")
 
             # Make multiple Yelp API calls for comprehensive information
-            print(f"Making Yelp searches for move from {origin} to {destination}...")
+            print(
+                f"Making Yelp searches for move from {origin} to {destination}...")
 
             # Helper function to extract key info from Yelp response
             def extract_yelp_summary(yelp_response):
                 try:
                     # Get just the text response from Yelp AI
                     if isinstance(yelp_response, dict) and 'response' in yelp_response:
-                        return yelp_response['response'][:1000]  # Limit to 1000 chars
-                    return str(yelp_response)[:1000]
+                        # Limit to 1000 chars
+                        return yelp_response['response']['text']
+                    return str(yelp_response)
                 except:
                     return "No data available"
 
             # Make Yelp calls and extract summaries
-            movers_data = call_yelp_ai(f"Find me the top 3 moving companies in {origin}")
-            apartments_data = call_yelp_ai(f"Find me the top 3 apartments or housing options in {destination}")
-            storage_data = call_yelp_ai(f"Find me the top 2 storage facilities in {origin} or {destination}")
-            cleaning_data = call_yelp_ai(f"Find me the top 2 cleaning services in {destination}")
-            furniture_data = call_yelp_ai(f"Find me the top 2 furniture stores in {destination}")
-            restaurants_data = call_yelp_ai(f"Find me the top 5 restaurants in {destination}")
-            activities_data = call_yelp_ai(f"Find me the top 5 fun things to do in {destination}")
+            movers_data = call_yelp_ai(
+                f"Find me the top 3 moving companies in {origin}")
+            apartments_data = call_yelp_ai(
+                f"Find me the top 3 apartments or housing options in {destination}")
+            storage_data = call_yelp_ai(
+                f"Find me the top 2 storage facilities in {origin} or {destination}")
+            print("Storage data:", storage_data)
+            cleaning_data = call_yelp_ai(
+                f"Find me the top 2 cleaning services in {destination}")
+            furniture_data = call_yelp_ai(
+                f"Find me the top 2 furniture stores in {destination}")
+            restaurants_data = call_yelp_ai(
+                f"Find me the top 5 restaurants in {destination}")
+            activities_data = call_yelp_ai(
+                f"Find me the top 5 fun things to do in {destination}")
 
             # Create a concise summary for GPT-4o
             yelp_summary = f"""
@@ -208,7 +258,7 @@ Restaurants in {destination}:
 Activities in {destination}:
 {extract_yelp_summary(activities_data)}
 """
-            
+
             print("Yelp summary prepared, generating moving plan...")
             print(yelp_summary)
 
@@ -241,8 +291,70 @@ Use the Yelp data where relevant, but also provide general advice for each step.
 
             final_content = plan_response.choices[0].message.content
 
+        elif is_business_query and len(messages) > 0:
+            # For follow-up questions asking about businesses, use Yelp
+            print("Detected business query in follow-up...")
+
+            # Use GPT to extract what they're looking for and where
+            context_messages = messages[-6:] if len(messages) > 6 else messages  # Last 6 messages for context
+            context_text = "\n".join([f"{m['role']}: {m['content']}" for m in context_messages])
+
+            extract_response = openai_client.chat.completions.create(
+                model="gpt-4o",
+                messages=[{
+                    "role": "user",
+                    "content": f"""Based on this conversation history and current question, extract:
+1. What type of business/service they're asking about
+2. What city/location (use context from previous messages if not specified)
+
+Conversation context:
+{context_text}
+
+Current question: {req.message}
+
+Return ONLY a JSON object with 'business_type' and 'location' keys."""
+                }],
+                response_format={"type": "json_object"}
+            )
+
+            query_info = json.loads(extract_response.choices[0].message.content)
+            business_type = query_info.get("business_type", "businesses")
+            location = query_info.get("location", "the area")
+
+            print(f"Searching Yelp for {business_type} in {location}")
+
+            # Make targeted Yelp call
+            yelp_query = f"Find me the top 5 {business_type} in {location}"
+            yelp_response = call_yelp_ai(yelp_query)
+
+            # Extract Yelp data
+            def extract_yelp_summary(yelp_response):
+                try:
+                    if isinstance(yelp_response, dict) and 'response' in yelp_response:
+                        return yelp_response['response']['text']
+                    return str(yelp_response)
+                except:
+                    return "No data available"
+
+            yelp_data = extract_yelp_summary(yelp_response)
+
+            # Add user message to history
+            messages.append({"role": "user", "content": req.message})
+
+            # Use GPT-4o with Yelp data to answer
+            chat_response = openai_client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "You are a helpful moving assistant. Answer questions about moving and relocation using the provided Yelp data when relevant. Be friendly and concise."}
+                ] + messages + [
+                    {"role": "system", "content": f"Here's relevant Yelp data to help answer:\n\n{yelp_data}"}
+                ]
+            )
+
+            final_content = chat_response.choices[0].message.content
+
         else:
-            # For follow-up questions, use regular GPT-4o chat
+            # For general follow-up questions, use regular GPT-4o chat
             messages.append({"role": "user", "content": req.message})
 
             chat_response = openai_client.chat.completions.create(
@@ -262,7 +374,32 @@ Use the Yelp data where relevant, but also provide general advice for each step.
                 "role": "assistant", "content": final_content}
         ]).execute()
 
-        return {"response": final_content}
+        # Generate conversation title from first message
+        new_title = None
+        if len(messages) == 0:  # This was the first message
+            try:
+                title_response = openai_client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{
+                        "role": "user",
+                        "content": f"Generate a concise 3-6 word title for this moving conversation. Just return the title, nothing else. Message: {req.message}"
+                    }],
+                    max_tokens=20
+                )
+                new_title = title_response.choices[0].message.content.strip().strip(
+                    '"').strip("'")
+
+                # Update conversation title
+                supabase.table("conversations").update({
+                    "title": new_title
+                }).eq("id", req.conversation_id).execute()
+
+                print(f"Generated title: {new_title}")
+            except Exception as e:
+                print(f"Error generating title: {e}")
+                # Continue even if title generation fails
+
+        return {"response": final_content, "title": new_title}
 
     except Exception as e:
         print(f"Error in chat endpoint: {e}")

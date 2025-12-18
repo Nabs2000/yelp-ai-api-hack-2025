@@ -70,15 +70,23 @@ yelp-ai-api-hack-2025/
 
 1. **Backend Configuration**
 
-Create `backend/.env`:
+Create `backend/.env` (use `backend/.env.example` as template):
 ```env
-OPENAI_API_KEY=your_openai_key
-YELP_API_KEY=your_yelp_key
-SUPABASE_URL=your_supabase_url
-SUPABASE_API_KEY=your_supabase_anon_key
+CLIENT_ID=your_yelp_client_id
+YELP_API_KEY=your_yelp_api_key
+OPENAI_API_KEY=your_openai_api_key
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_API_KEY=your_supabase_api_key
 ```
 
-2. **Supabase Database Setup**
+2. **Frontend Configuration**
+
+Create `frontend/.env.local` (use `frontend/.env.example` as template):
+```env
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
+
+3. **Supabase Database Setup**
 
 Create these tables in your Supabase project:
 
@@ -150,6 +158,12 @@ Navigate to the frontend URL in your browser and:
   - Body: `{user_id: string}`
   - Returns: `{conversation_id: string}`
 
+- `GET /conversations/{user_id}` - Get all conversations for a user
+  - Returns: `{conversations: Conversation[]}`
+
+- `GET /conversation/{conversation_id}/messages` - Get all messages for a conversation
+  - Returns: `{messages: Message[]}`
+
 - `POST /chat` - Send message and get AI response
   - Body: `{user_id, conversation_id, message, latitude?, longitude?}`
   - Returns: `{response: string}`
@@ -168,7 +182,7 @@ Navigate to the frontend URL in your browser and:
 
 - User registration and authentication
 - Protected routes with auth validation
-- Full chat UI with @assistant-ui/react
+- Full chat UI with markdown rendering (react-markdown)
 - LangChain agent with custom system prompt
 - Yelp AI Chat API v2 integration
 - Automatic geolocation capture
@@ -177,6 +191,39 @@ Navigate to the frontend URL in your browser and:
 - Message persistence in Supabase
 - Error handling and loading states
 - Responsive dark-themed design
+- Error boundaries for graceful error handling
+- Environment variable configuration
+- Conversation history loading from database
+- Real-time message fetching when switching conversations
+- Automatic conversation title generation based on content
+
+## Recent Bug Fixes & Improvements
+
+### Fixed Issues
+1. **Conversations not loading** - Implemented API endpoint to fetch user conversations
+2. **Chat history not persisting** - Added message fetching when opening existing conversations
+3. **Hardcoded API URLs** - Moved all API URLs to environment variables
+4. **No loading states** - Added loading spinners for conversations and messages
+5. **Security concerns** - Created .env.example files, updated .gitignore
+6. **Missing error handling** - Added ErrorBoundary component for app-wide error handling
+
+### New API Endpoints
+- `GET /conversations/{user_id}` - Retrieve all conversations for a user
+- `GET /conversation/{conversation_id}/messages` - Fetch message history for a conversation
+
+### UI/UX Enhancements
+- Loading states for conversation creation
+- Loading spinner while fetching conversations
+- Loading indicator when opening existing chats
+- Better error messages and user feedback
+- Consistent use of environment variables across all components
+- **Automatic conversation title generation** - Conversations are automatically titled based on the user's first message using GPT-4o (e.g., "Moving from NYC to San Francisco")
+
+### Smart Yelp Integration
+- **Context-aware Yelp calls** - The agent now intelligently calls Yelp API for follow-up questions about businesses
+- **Targeted searches** - When you ask about specific business types in follow-up (e.g., "Tell me more about storage"), it makes a focused Yelp API call
+- **Location context** - Remembers cities from previous messages to provide relevant recommendations
+- **Keywords detected**: restaurants, storage, apartments, furniture, cleaning, activities, and more
 
 ## Agent Capabilities
 
