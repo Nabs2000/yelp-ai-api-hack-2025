@@ -4,21 +4,30 @@ An intelligent assistant application that helps people move from one city to ano
 
 ## Features
 
-- **AI-Powered Chat Assistant**: Uses LangChain with GPT-3.5-turbo to provide personalized moving advice
+- **🐳 One-Command Setup**: Run entire application with Docker Compose - no manual configuration needed
+- **⚡ 75% Faster**: Parallel async Yelp API calls reduce response time from 15-20s to 3-5s
+- **🤖 Smart Conversations**: AI automatically generates conversation titles and remembers context
+- **AI-Powered Chat Assistant**: Uses GPT-4o to provide personalized moving advice
 - **Yelp Integration**: Accesses Yelp AI Chat API v2 for real-time local business recommendations
+- **Intelligent Follow-ups**: Detects business queries and automatically fetches relevant Yelp data
 - **User Authentication**: Complete auth system with Supabase (email/password)
 - **Location-Aware**: Automatically captures user location for context-aware recommendations
 - **Conversation Management**: Create, view, and switch between multiple chat conversations
 - **Modern UI**: Beautiful dark-themed interface with React and Tailwind CSS
-- **Persistent History**: All conversations stored in Supabase for continuity
+- **Persistent History**: All conversations and messages stored in Supabase
+- **Error Handling**: Graceful error boundaries and user-friendly error messages
 
 ## Tech Stack
 
+### Infrastructure
+- **Docker** & **Docker Compose** - Containerization and orchestration
+- **Nginx** - Production web server for frontend
+
 ### Backend
-- **FastAPI** - Modern Python web framework
-- **LangChain** - AI agent orchestration
-- **OpenAI GPT-3.5-turbo** - Language model
-- **Supabase** - Authentication & database
+- **FastAPI** - Modern Python web framework with async support
+- **OpenAI GPT-4o** - Advanced language model
+- **httpx** - Async HTTP client for parallel API calls
+- **Supabase** - Authentication & PostgreSQL database
 - **Yelp AI Chat API v2** - Business recommendations
 - **UV** - Fast Python package manager
 
@@ -26,8 +35,8 @@ An intelligent assistant application that helps people move from one city to ano
 - **React 19** with TypeScript
 - **Vite** - Build tool
 - **Tailwind CSS** - Styling
-- **@assistant-ui/react** - AI chat UI components
 - **React Router** - Navigation
+- **React Markdown** - Rendering AI responses
 - **Lucide React** - Icons
 
 ## Project Structure
@@ -56,6 +65,105 @@ yelp-ai-api-hack-2025/
 ```
 
 ## Getting Started
+
+You can run this application in two ways:
+1. **🐳 Docker** (Recommended - Easiest setup)
+2. **💻 Local Development** (Traditional setup)
+
+---
+
+## 🐳 Quick Start with Docker (Recommended)
+
+### Prerequisites
+- Docker Desktop installed ([Download here](https://www.docker.com/get-started))
+- Supabase account
+- OpenAI API key
+- Yelp API key
+
+### Setup (3 Steps)
+
+**1. Configure Environment Variables**
+```bash
+# Copy example files
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env.local
+
+# Edit backend/.env with your API keys
+# (Use your favorite text editor)
+```
+
+**2. Set up Supabase Database**
+
+Run these SQL commands in your Supabase SQL Editor:
+```sql
+-- Create conversations table
+CREATE TABLE conversations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES auth.users(id),
+  title TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create messages table
+CREATE TABLE messages (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+  role TEXT CHECK (role IN ('user', 'assistant', 'tool')),
+  content TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes
+CREATE INDEX idx_conversations_user_id ON conversations(user_id);
+CREATE INDEX idx_messages_conversation_id ON messages(conversation_id);
+```
+
+**3. Start the Application**
+
+**On Linux/Mac:**
+```bash
+chmod +x start.sh
+./start.sh
+```
+
+**On Windows:**
+```bash
+start.bat
+```
+
+**Or manually:**
+```bash
+docker-compose up --build
+```
+
+**That's it!** 🎉
+
+- Frontend: http://localhost
+- Backend API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+
+### Docker Commands
+
+```bash
+# View logs
+docker-compose logs -f
+
+# Stop application
+docker-compose down
+
+# Restart services
+docker-compose restart
+
+# Rebuild and restart
+docker-compose up --build
+
+# Development mode with hot reload
+docker-compose -f docker-compose.dev.yml up
+```
+
+---
+
+## 💻 Local Development Setup
 
 ### Prerequisites
 

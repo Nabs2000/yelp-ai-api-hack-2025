@@ -91,7 +91,7 @@ class ChatRequest(BaseModel):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:8080", "http://localhost:5173",
-                   "http://localhost:5174", "http://localhost:5175"],
+                   "http://localhost:5174", "http://localhost:5175", "http://localhost"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -200,7 +200,7 @@ async def chat_endpoint(req: ChatRequest):
     # Check if this is a new moving request OR a follow-up asking for business recommendations
     moving_keywords = ["move", "moving", "relocate", "relocation"]
     is_initial_moving_request = any(keyword in req.message.lower()
-                                     for keyword in moving_keywords) and len(messages) <= 1
+                                    for keyword in moving_keywords) and len(messages) <= 1
 
     # Check if follow-up is asking for business recommendations
     business_keywords = ["restaurant", "food", "eat", "storage", "mover", "moving company",
@@ -208,7 +208,8 @@ async def chat_endpoint(req: ChatRequest):
                          "cleaning", "activity", "activities", "things to do", "fun",
                          "recommend", "suggestion", "find", "looking for", "tell me about",
                          "what about", "where can i", "best", "good"]
-    is_business_query = any(keyword in req.message.lower() for keyword in business_keywords)
+    is_business_query = any(keyword in req.message.lower()
+                            for keyword in business_keywords)
 
     try:
         if is_initial_moving_request:
@@ -245,13 +246,20 @@ async def chat_endpoint(req: ChatRequest):
             # Make Yelp calls in parallel for better performance
             print("Making parallel Yelp API calls...")
             movers_data, apartments_data, storage_data, cleaning_data, furniture_data, restaurants_data, activities_data = await asyncio.gather(
-                call_yelp_ai_async(f"Find me the top 3 moving companies in {origin}"),
-                call_yelp_ai_async(f"Find me the top 3 apartments or housing options in {destination}"),
-                call_yelp_ai_async(f"Find me the top 2 storage facilities in {origin} or {destination}"),
-                call_yelp_ai_async(f"Find me the top 2 cleaning services in {destination}"),
-                call_yelp_ai_async(f"Find me the top 2 furniture stores in {destination}"),
-                call_yelp_ai_async(f"Find me the top 5 restaurants in {destination}"),
-                call_yelp_ai_async(f"Find me the top 5 fun things to do in {destination}")
+                call_yelp_ai_async(
+                    f"Find me the top 3 moving companies in {origin}"),
+                call_yelp_ai_async(
+                    f"Find me the top 3 apartments or housing options in {destination}"),
+                call_yelp_ai_async(
+                    f"Find me the top 2 storage facilities in {origin} or {destination}"),
+                call_yelp_ai_async(
+                    f"Find me the top 2 cleaning services in {destination}"),
+                call_yelp_ai_async(
+                    f"Find me the top 2 furniture stores in {destination}"),
+                call_yelp_ai_async(
+                    f"Find me the top 5 restaurants in {destination}"),
+                call_yelp_ai_async(
+                    f"Find me the top 5 fun things to do in {destination}")
             )
             print("All Yelp API calls completed!")
 
@@ -316,8 +324,10 @@ Use the Yelp data where relevant, but also provide general advice for each step.
             print("Detected business query in follow-up...")
 
             # Use GPT to extract what they're looking for and where
-            context_messages = messages[-6:] if len(messages) > 6 else messages  # Last 6 messages for context
-            context_text = "\n".join([f"{m['role']}: {m['content']}" for m in context_messages])
+            # Last 6 messages for context
+            context_messages = messages[-6:] if len(messages) > 6 else messages
+            context_text = "\n".join(
+                [f"{m['role']}: {m['content']}" for m in context_messages])
 
             extract_response = openai_client.chat.completions.create(
                 model="gpt-4o",
@@ -337,7 +347,8 @@ Return ONLY a JSON object with 'business_type' and 'location' keys."""
                 response_format={"type": "json_object"}
             )
 
-            query_info = json.loads(extract_response.choices[0].message.content)
+            query_info = json.loads(
+                extract_response.choices[0].message.content)
             business_type = query_info.get("business_type", "businesses")
             location = query_info.get("location", "the area")
 

@@ -3,7 +3,11 @@
     "allow": [
       "Bash(cat:*)",
       "Bash(xargs git show --stat)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(docker --version:*)",
+      "Bash(docker info:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker logs:*)"
     ]
   }
 }
