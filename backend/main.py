@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 import json
 import os
 import requests
+import httpx
+import asyncio
 from openai import OpenAI
 
 load_dotenv()
@@ -19,7 +21,7 @@ yelp_api_key = os.environ.get("YELP_API_KEY")
 
 
 def call_yelp_ai(query: str, chat_id: str = None) -> dict:
-    """Call Yelp AI Chat API v2"""
+    """Call Yelp AI Chat API v2 (synchronous)"""
     url = "https://api.yelp.com/ai/chat/v2"
     headers = {
         "Authorization": f"Bearer {yelp_api_key}",
@@ -36,6 +38,28 @@ def call_yelp_ai(query: str, chat_id: str = None) -> dict:
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
+        return {"error": f"API request failed: {str(e)}"}
+
+
+async def call_yelp_ai_async(query: str, chat_id: str = None) -> dict:
+    """Call Yelp AI Chat API v2 (asynchronous)"""
+    url = "https://api.yelp.com/ai/chat/v2"
+    headers = {
+        "Authorization": f"Bearer {yelp_api_key}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "query": query,
+        "chat_id": chat_id if chat_id else "",
+        "user_context": {}
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(url, headers=headers, json=data)
+            response.raise_for_status()
+            return response.json()
+    except httpx.RequestError as e:
         return {"error": f"API request failed: {str(e)}"}
 
 
@@ -218,22 +242,18 @@ async def chat_endpoint(req: ChatRequest):
                 except:
                     return "No data available"
 
-            # Make Yelp calls and extract summaries
-            movers_data = call_yelp_ai(
-                f"Find me the top 3 moving companies in {origin}")
-            apartments_data = call_yelp_ai(
-                f"Find me the top 3 apartments or housing options in {destination}")
-            storage_data = call_yelp_ai(
-                f"Find me the top 2 storage facilities in {origin} or {destination}")
-            print("Storage data:", storage_data)
-            cleaning_data = call_yelp_ai(
-                f"Find me the top 2 cleaning services in {destination}")
-            furniture_data = call_yelp_ai(
-                f"Find me the top 2 furniture stores in {destination}")
-            restaurants_data = call_yelp_ai(
-                f"Find me the top 5 restaurants in {destination}")
-            activities_data = call_yelp_ai(
-                f"Find me the top 5 fun things to do in {destination}")
+            # Make Yelp calls in parallel for better performance
+            print("Making parallel Yelp API calls...")
+            movers_data, apartments_data, storage_data, cleaning_data, furniture_data, restaurants_data, activities_data = await asyncio.gather(
+                call_yelp_ai_async(f"Find me the top 3 moving companies in {origin}"),
+                call_yelp_ai_async(f"Find me the top 3 apartments or housing options in {destination}"),
+                call_yelp_ai_async(f"Find me the top 2 storage facilities in {origin} or {destination}"),
+                call_yelp_ai_async(f"Find me the top 2 cleaning services in {destination}"),
+                call_yelp_ai_async(f"Find me the top 2 furniture stores in {destination}"),
+                call_yelp_ai_async(f"Find me the top 5 restaurants in {destination}"),
+                call_yelp_ai_async(f"Find me the top 5 fun things to do in {destination}")
+            )
+            print("All Yelp API calls completed!")
 
             # Create a concise summary for GPT-4o
             yelp_summary = f"""
@@ -323,9 +343,9 @@ Return ONLY a JSON object with 'business_type' and 'location' keys."""
 
             print(f"Searching Yelp for {business_type} in {location}")
 
-            # Make targeted Yelp call
+            # Make targeted Yelp call (async)
             yelp_query = f"Find me the top 5 {business_type} in {location}"
-            yelp_response = call_yelp_ai(yelp_query)
+            yelp_response = await call_yelp_ai_async(yelp_query)
 
             # Extract Yelp data
             def extract_yelp_summary(yelp_response):
